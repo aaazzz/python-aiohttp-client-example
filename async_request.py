@@ -1,3 +1,4 @@
+import sys
 import aiohttp
 import asyncio
 import aiojobs
@@ -24,14 +25,14 @@ async def fetch(session, url):
 async def task(i):
     async with aiohttp.ClientSession(headers={ 'X-Auth-Token': "hoge" }) as session:
         json = await fetch(session, 'http://localhost:7001/api/user')
-        return await do_upsert_bulk(json['results'])
+        return await do_upsert_bulk(json)
 
 
-async def main():
+async def main(num_task):
     while True:
         scheduler = await aiojobs.create_scheduler()
         response_buffer = []
-        for i in range(100):
+        for i in range(num_task):
             # spawn jobs
             response = await scheduler.spawn(task(i))
             response_buffer.append(response)
@@ -45,7 +46,13 @@ async def main():
         print(f'# of response: {len(response_buffer)}/100')
 
 
-client = motor.motor_asyncio.AsyncIOMotorClient('localhost', 27017)
-db = client.test_database
-collection = db.test_collection
-asyncio.get_event_loop().run_until_complete(main())
+if __name__ == "__main__":
+    if len(sys.argv) < 2 or not sys.argv[1].isnumeric():
+        print('Invalid Arguments')
+        exit(-1)
+
+    client = motor.motor_asyncio.AsyncIOMotorClient('localhost', 27017)
+    db = client.test_database
+    collection = db.test_collection
+    asyncio.get_event_loop().run_until_complete(main(10))
+
